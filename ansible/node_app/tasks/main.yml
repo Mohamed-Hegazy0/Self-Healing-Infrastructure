@@ -1,0 +1,37 @@
+---
+- name: Install prerequisites
+  apt:
+    name:
+      - curl
+      - git
+    state: present
+    update_cache: yes
+
+- name: Add NodeSource repo for Node.js {{ node_version }}
+  shell: curl -fsSL https://deb.nodesource.com/setup_{{ node_version }} | bash -
+  args:
+    executable: /bin/bash
+
+- name: Install nodejs
+  apt:
+    name: nodejs
+    state: present
+
+- name: Clone app repo from GitHub
+  git:
+    repo: "{{ repo_url }}"
+    dest: "{{ app_dir }}"
+    force: yes
+
+- name: Install Node.js dependencies
+  npm:
+    path: "{{ app_dir }}/{{ app_subdir }}"
+    production: yes
+
+- name: Start Node.js app in background
+  shell: "nohup {{ app_start_command }} > /dev/null 2>&1 &"
+  args:
+    chdir: "{{ app_dir }}/{{ app_subdir }}"
+  async: 10
+  poll: 0
+

@@ -1,0 +1,6 @@
+---
+- name: install and configure apashe
+  hosts: web
+  become: yes
+  roles:
+    - apashe

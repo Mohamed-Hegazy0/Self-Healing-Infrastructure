@@ -1,0 +1,8 @@
+---
+app_dir: /opt/myapp
+repo_url: "https://github.com/Ahmed-Moourad/simple-nodejs-app.git"
+app_subdir: "app"
+node_version: "18.x"
+app_start_command: "npm start"
+app_port: 3000
+
