@@ -1,0 +1,78 @@
+global:
+  resolve_timeout: 5m
+  smtp_smarthost: 'localhost:587'
+  smtp_from: 'alerts@self-healing-app.com'
+
+templates:
+  - '/etc/alertmanager/templates/*.tmpl'
+
+route:
+  group_by: ['alertname', 'cluster', 'service']
+  group_wait: 10s
+  group_interval: 10s
+  repeat_interval: 12h
+  receiver: 'default'
+  routes:
+    - match:
+        severity: auto-remediate
+      receiver: 'ansible-webhook'
+      continue: true
+
+    - match:
+        severity: critical
+      receiver: 'slack-critical'
+      continue: true
+
+    - match:
+        severity: warning
+      receiver: 'slack-warnings'
+      group_wait: 30s
+
+receivers:
+  - name: 'default'
+    slack_configs:
+      - api_url: '${SLACK_WEBHOOK_URL}'
+        channel: '#alerts'
+        title: 'Self-Healing Alert'
+        text: '{{ range .Alerts }}{{ .Annotations.summary }}\n{{ end }}'
+
+  - name: 'ansible-webhook'
+    webhook_configs:
+      - url: 'http://webhook-receiver:5000/alertmanager'
+        send_resolved: false
+        http_config:
+          timeout: 30s
+
+  - name: 'slack-critical'
+    slack_configs:
+      - api_url: '${SLACK_WEBHOOK_URL}'
+        channel: '#critical-alerts'
+        title: 'CRITICAL: {{ .GroupLabels.alertname }}'
+        text: |
+          {{ range .Alerts }}
+          *Alert:* {{ .Annotations.summary }}
+          *Description:* {{ .Annotations.description }}
+          *Instance:* {{ .Labels.instance }}
+          *Severity:* {{ .Labels.severity }}
+          *Time:* {{ .StartsAt }}
+          {{ end }}
+        send_resolved: true
+
+  - name: 'slack-warnings'
+    slack_configs:
+      - api_url: '${SLACK_WEBHOOK_URL}'
+        channel: '#warnings'
+        title: 'WARNING: {{ .GroupLabels.alertname }}'
+        text: |
+          {{ range .Alerts }}
+          *Alert:* {{ .Annotations.summary }}
+          *Instance:* {{ .Labels.instance }}
+          {{ end }}
+        send_resolved: true
+
+inhibit_rules:
+  - source_match:
+      severity: 'critical'
+    target_match:
+      severity: 'warning'
+    equal: ['alertname', 'cluster', 'service']

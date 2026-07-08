@@ -1,0 +1,55 @@
+pipeline {
+    agent any
+    environment {
+        AWS_REGION = 'us-east-1'
+        DOCKER_REGISTRY = 'your-ecr.dkr.ecr.us-east-1.amazonaws.com'
+        APP_NAME = 'self-healing-app'
+    }
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout scm
+                script {
+                    env.GIT_COMMIT_SHORT = sh(script: 'git rev-parse --short HEAD', returnStdout: true).trim()
+                    env.IMAGE_TAG = "${env.BUILD_NUMBER}-${env.GIT_COMMIT_SHORT}"
+                }
+            }
+        }
+        stage('Test') {
+            steps {
+                dir('app') {
+                    sh 'npm install && npm test'
+                }
+            }
+        }
+        stage('Build Docker') {
+            steps {
+                script {
+                    def image = docker.build("${env.DOCKER_REGISTRY}/${env.APP_NAME}:${env.IMAGE_TAG}", "-f docker/Dockerfile app/")
+                    env.BUILT_IMAGE = image.id
+                }
+            }
+        }
+        stage('Push to ECR') {
+            when { branch 'main' }
+            steps {
+                script {
+                    docker.withRegistry("https://${env.DOCKER_REGISTRY}", 'ecr:us-east-1:aws-credentials') {
+                        docker.image(env.BUILT_IMAGE).push()
+                        docker.image(env.BUILT_IMAGE).push('latest')
+                    }
+                }
+            }
+        }
+        stage('Deploy') {
+            when { branch 'main' }
+            steps {
+                sh 'aws autoscaling start-instance-refresh --auto-scaling-group-name self-healing-app-asg --strategy Rolling'
+            }
+        }
+    }
+    post {
+        success { slackSend(color: 'good', message: "Deployed: ${env.JOB_NAME} #${env.BUILD_NUMBER}") }
+        failure { slackSend(color: 'danger', message: "Failed: ${env.JOB_NAME} #${env.BUILD_NUMBER}") }
+    }
+}

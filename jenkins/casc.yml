@@ -1,0 +1,57 @@
+jenkins:
+  systemMessage: "Self-Healing Infrastructure - Jenkins Controller"
+  numExecutors: 2
+
+  securityRealm:
+    local:
+      allowsSignup: false
+      users:
+        - id: "admin"
+          password: "${ADMIN_PASSWORD}"
+
+  authorizationStrategy:
+    loggedInUsersCanDoAnything:
+      allowAnonymousRead: false
+
+credentials:
+  system:
+    domainCredentials:
+      - credentials:
+          - string:
+              id: "slack-webhook"
+              secret: "${SLACK_WEBHOOK_URL}"
+              description: "Slack Webhook for Notifications"
+          - aws:
+              id: "aws-credentials"
+              accessKey: "${AWS_ACCESS_KEY_ID}"
+              secretKey: "${AWS_SECRET_ACCESS_KEY}"
+              description: "AWS Credentials"
+
+jobs:
+  - script: >
+      pipelineJob('self-healing-app-deploy') {
+        description('Deploy Self-Healing Application')
+        definition {
+          cpsScm {
+            scm {
+              git {
+                remote {
+                  url('https://github.com/your-org/self-healing-infrastructure.git')
+                  credentials('github-credentials')
+                }
+                branches('*/main', '*/develop')
+              }
+            }
+            scriptPath('jenkins/Jenkinsfile')
+          }
+        }
+        triggers {
+          githubPush()
+        }
+      }
+
+unclassified:
+  slackNotifier:
+    teamDomain: "your-team"
+    tokenCredentialId: "slack-webhook"
+    room: "#deployments"

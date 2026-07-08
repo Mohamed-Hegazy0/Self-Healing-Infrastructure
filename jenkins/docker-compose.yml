@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+  jenkins:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: jenkins
+    user: root
+    ports:
+      - "8080:8080"
+      - "50000:50000"
+    volumes:
+      - jenkins-data:/var/jenkins_home
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ~/.aws:/root/.aws:ro
+      - ./casc.yml:/var/jenkins_home/casc.yml
+    environment:
+      - CASC_JENKINS_CONFIG=/var/jenkins_home/casc.yml
+      - JAVA_OPTS=-Djenkins.install.runSetupWizard=false
+    networks:
+      - monitoring
+    restart: unless-stopped
+
+volumes:
+  jenkins-data:
+
+networks:
+  monitoring:
+    external: true
