@@ -17,37 +17,9 @@ scrape_configs:
     static_configs:
       - targets: ['localhost:9090']
 
-  - job_name: 'node-exporter'
-    ec2_sd_configs:
-      - region: us-east-1
-        port: 9100
-        filters:
-          - name: tag:Project
-            values: [self-healing-app]
-    relabel_configs:
-      - source_labels: [__meta_ec2_instance_id]
-        target_label: instance_id
-      - source_labels: [__meta_ec2_tag_Name]
-        target_label: name
-
-  - job_name: 'cadvisor'
-    ec2_sd_configs:
-      - region: us-east-1
-        port: 8080
-        filters:
-          - name: tag:Project
-            values: [self-healing-app]
-
-  - job_name: 'app'
-    ec2_sd_configs:
-      - region: us-east-1
-        port: 3000
-        filters:
-          - name: tag:Project
-            values: [self-healing-app]
+  # التعديل الجديد عشان بروميثيوس يراقب التطبيق المحلي بتاعنا
+  - job_name: 'nodejs_app'
     metrics_path: '/metrics'
     scrape_interval: 10s
-
-  - job_name: 'cloudwatch'
     static_configs:
-      - targets: ['cloudwatch-exporter:9106']
+      - targets: ['172.17.0.1:3000']

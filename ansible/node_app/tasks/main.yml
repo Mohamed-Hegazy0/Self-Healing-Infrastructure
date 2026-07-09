@@ -1,37 +1,13 @@
 ---
-- name: Install prerequisites
+# 1. التأكد من وجود المكتبة اللي بتخلي أنسبل يتحكم في دوكر
+- name: Ensure python3-docker is installed
   apt:
-    name:
-      - curl
-      - git
+    name: python3-docker
     state: present
     update_cache: yes
 
-- name: Add NodeSource repo for Node.js {{ node_version }}
-  shell: curl -fsSL https://deb.nodesource.com/setup_{{ node_version }} | bash -
-  args:
-    executable: /bin/bash
-
-- name: Install nodejs
-  apt:
-    name: nodejs
-    state: present
-
-- name: Clone app repo from GitHub
-  git:
-    repo: "{{ repo_url }}"
-    dest: "{{ app_dir }}"
-    force: yes
-
-- name: Install Node.js dependencies
-  npm:
-    path: "{{ app_dir }}/{{ app_subdir }}"
-    production: yes
-
-- name: Start Node.js app in background
-  shell: "nohup {{ app_start_command }} > /dev/null 2>&1 &"
-  args:
-    chdir: "{{ app_dir }}/{{ app_subdir }}"
-  async: 10
-  poll: 0
-
+# 2. أمر السحر: التأكد إن كونتينر التطبيق قايم وشغال
+- name: Ensure self-healing-app container is running
+  community.docker.docker_container:
+    name: self-healing-app
+    state: started

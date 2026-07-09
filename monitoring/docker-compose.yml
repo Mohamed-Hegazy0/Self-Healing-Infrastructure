@@ -54,18 +54,6 @@ services:
     networks:
       - monitoring
     restart: unless-stopped
-
-  cloudwatch-exporter:
-    image: prom/cloudwatch-exporter:latest
-    container_name: cloudwatch-exporter
-    ports:
-      - "9106:9106"
-    volumes:
-      - ./cloudwatch/config.yml:/config/config.yml
-    networks:
-      - monitoring
-    restart: unless-stopped
-
 volumes:
   prometheus-data:
   alertmanager-data:
@@ -73,4 +61,5 @@ volumes:
 
 networks:
   monitoring:
-    driver: bridge
+    external: true
+
