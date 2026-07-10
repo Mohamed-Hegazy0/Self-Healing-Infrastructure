@@ -45,7 +45,7 @@ pipeline {
 
         stage('Build Docker Image') {
             steps {
-                sh "docker build -f docker/Dockerfile -t ${env.IMAGE_URI} app/"
+                sh "docker build -f app/Dockerfile -t ${env.IMAGE_URI} app/"
             }
         }
 

@@ -1,209 +1,70 @@
-# Self-Healing Infrastructure Project
+# 🚀 Self-Healing Infrastructure Project
 
-مشروع متكامل لبنية تحتية ذاتية الإصلاح على AWS باستخدام Terraform, Docker, Jenkins, Prometheus, و Ansible.
+A comprehensive, automated Self-Healing Infrastructure project deployed on AWS. This system leverages modern DevSecOps practices to autonomously monitor, detect, and remediate application failures in real-time without human intervention.
+
+![Docker](https://img.shields.io/badge/Docker-2CA5E0?style=for-the-badge&logo=docker&logoColor=white)
+![Prometheus](https://img.shields.io/badge/Prometheus-E6522C?style=for-the-badge&logo=Prometheus&logoColor=white)
+![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)
+![Slack](https://img.shields.io/badge/Slack-4A154B?style=for-the-badge&logo=slack&logoColor=white)
+![AWS](https://img.shields.io/badge/AWS-232F3E?style=for-the-badge&logo=amazon-aws&logoColor=white)
+![Terraform](https://img.shields.io/badge/Terraform-7B42BC?style=for-the-badge&logo=terraform&logoColor=white)
 
 ## 🏗️ Architecture
 
-```
+The system is designed with a closed-loop remediation architecture. When a service fails, Prometheus detects the anomaly and triggers Alertmanager, which simultaneously notifies the engineering team via Slack and triggers a custom Python Webhook to execute recovery commands.
+
+```text
 ┌─────────────┐     ┌─────────────┐     ┌─────────────┐
-│   Users     │────▶│     ALB     │────▶│    ASG      │
-│             │     │ (Blue/Green)│     │  (EC2+Docker)│
+│    Users    │────▶│     ALB     │────▶│    ASG      │
+│             │     │ (Blue/Green)│     │  (EC2+Docker)
 └─────────────┘     └─────────────┘     └──────┬──────┘
-                                                │
-                    ┌─────────────────────────────┘
+                                               │
+                    ┌──────────────────────────┘
                     ▼
             ┌─────────────┐
-            │  Prometheus  │◀── Metrics
-            │  + Grafana   │
+            │  Prometheus │◀── Scrapes Metrics (e.g., Container State)
+            │  + Grafana  │
             └──────┬──────┘
-                   │ Alert
+                   │ Triggers Alert
                    ▼
             ┌─────────────┐
-            │ Alertmanager │───▶ Slack
+            │ Alertmanager│
             └──────┬──────┘
-                   │ Webhook
-                   ▼
-            ┌─────────────┐
-            │   Ansible    │───▶ Auto-Healing
-            │  Webhook     │     (Disk/Restart/Memory)
-            └─────────────┘
+                   │
+         ┌─────────┴─────────┐
+         ▼                   ▼
+┌─────────────────┐ ┌─────────────────┐
+│ Slack Channels  │ │ Custom Webhook  │───▶ Executes `docker restart`
+│ (#all-critical) │ │   (Python API)  │     (Auto-Healing Action)
+└─────────────────┘ └─────────────────┘
 ```
-
-## 📁 Project Structure
-
+# 📁 Core Project StructurePlaintextself-healing-infrastructure/
 ```
-self-healing-infrastructure/
-├── terraform/          # Infrastructure as Code
-│   ├── modules/
-│   │   ├── vpc/        # VPC, Subnets, IGW, NAT
-│   │   ├── alb/        # Application Load Balancer
-│   │   └── asg/        # Auto Scaling Group
-│   ├── main.tf
-│   ├── variables.tf
-│   └── outputs.tf
-├── app/                # Node.js Application
-│   ├── server.js       # Express + Prometheus metrics
-│   ├── server.test.js  # Unit tests
-│   └── package.json
-├── docker/             # Docker Configuration
-│   ├── Dockerfile
-│   ├── docker-compose.yml
-│   └── nginx.conf
-├── ansible/            # Self-Healing Automation
-│   ├── playbooks/
-│   │   ├── disk_cleanup.yml
-│   │   ├── restart_service.yml
-│   │   └── memory_cleanup.yml
-│   ├── webhook_receiver.py
+├── monitoring/         # Observability Stack
+│   ├── prometheus/     # Alert rules (alert.rules.yml)
+│   ├── alertmanager/   # Routing config (alertmanager.yml)
 │   └── docker-compose.yml
-├── monitoring/         # Prometheus + Alertmanager + Grafana
-│   ├── prometheus/
-│   ├── alertmanager/
-│   └── docker-compose.yml
-├── jenkins/            # CI/CD Pipeline
-│   ├── Jenkinsfile
-│   ├── Dockerfile
-│   └── docker-compose.yml
-└── scripts/
-    └── run-all.sh      # One command to run everything
+├── ansible/            # Auto-Remediation Engine
+│   └── webhook.py      # Python HTTP Server listening on port 5000
+├── docker/             # Application Environment
+│   └── docker-compose.yml (App, Nginx Proxy)
+├── terraform/          # Infrastructure as Code (AWS VPC, EC2, ASG)
+└── jenkins/            # CI/CD Pipeline Configuration
 ```
-
-## 🚀 Quick Start
-
-### Prerequisites
-- Docker & Docker Compose
-- AWS CLI (configured)
-- Terraform
-- Node.js 18+
-
-### Option 1: Run Everything with One Command
-
-```bash
-chmod +x scripts/run-all.sh
-./scripts/run-all.sh "https://hooks.slack.com/services/YOUR/WEBHOOK/URL"
+# 🚀 Quick Start & Deployment1. Start the Infrastructure & Monitoring StackDeploy the core application, Prometheus, Grafana, and Alertmanager using Docker 
 ```
-
-### Option 2: Run Services Individually
-
-```bash
-# Create shared network
-docker network create monitoring
-
-# Run the App
-cd docker
+Compose:Bashcd ~/Self-Healing-Infrastructure/docker
 docker-compose up -d
-
-# Run Monitoring Stack
-cd ../monitoring
-SLACK_WEBHOOK_URL="your-webhook-url" docker-compose up -d
-
-# Run Ansible + Webhook Receiver
-cd ../ansible
-SLACK_WEBHOOK_URL="your-webhook-url" docker-compose up -d
-
-# Run Jenkins
-cd ../jenkins
-docker-compose up -d
+2. Initialize the Self-Healing Engine (Webhook)Start the custom Python webhook receiver in the background. This service listens for Alertmanager POST requests and executes recovery commands with host-level permissions.Bashcd ~/Self-Healing-Infrastructure/ansible
+nohup python3 -u webhook.py > webhook.log 2>&1 &
+3. Verify Running ServicesEnsure all components are healthy and interconnected:Bashdocker ps
+ps aux | grep webhook.py
+#🎬 Testing Self-Healing (Live Demo Scenario)This scenario demonstrates the core capability of the project: autonomous recovery.Step 1: Simulate a Critical FailureManually stop the main application container to simulate a crash:Bashdocker stop self-healing-app
+Step 2: Observation (No Human Intervention)Prometheus detects the missing container and triggers the ServiceDown alert.Alertmanager receives the alert and evaluates routing rules.Slack Integration: An instant notification is pushed to the #all-critical-alerts Slack channel.Auto-Remediation: Simultaneously, Alertmanager sends a POST request to our webhook.py.Step 3: Automated Recovery ValidationCheck the container status after ~1 minute. The webhook will have executed docker restart self-healing-app, restoring the service automatically:Bashdocker ps
+# Expected Output: self-healing-app ... Up X seconds (health: starting)
+Check the Webhook logs to see the remediation trace:Bashtail -f ~/Self-Healing-Infrastructure/ansible/webhook.log
+# 🚨 Alert Received from Alertmanager! Triggering Self-Healing...
+# ✅ Container 'self-healing-app' restarted successfully.
+# 📊 Alert Routing & Remediation MatrixAlert RuleSeveritySlack ChannelAuto-Remediation ActionServiceDowncritical#all-critical-alertswebhook.py ➔ Container RestartHighErrorRatecritical#all-critical-alertswebhook.py ➔ Service RestartHighDiskUsagewarning#warnningManual Review / Disk CleanupHighMemorywarning#warnningManual Review / Process Kill🔗 Port Mapping ReferenceServiceEndpointNginx Proxy (App)http://<EC2-IP>:80Grafanahttp://<EC2-IP>:3001Prometheushttp://<EC2-IP>:9090Alertmanagerhttp://<EC2-IP>:9093Webhook Receiverhttp://localhost:5000 (Internal)Jenkinshttp://<EC2-IP>:8080Developed with a focus on high availability, rapid incident response, and zero-downtime infrastructure.EOF
 ```
-
-### 2. Access Services
-
-| Service | URL |
-|---------|-----|
-| Application | http://localhost:3000 |
-| Health Check | http://localhost:3000/health |
-| Metrics | http://localhost:3000/metrics |
-| Prometheus | http://localhost:9090 |
-| Grafana | http://localhost:3001 (admin/admin123) |
-| Alertmanager | http://localhost:9093 |
-| Jenkins | http://localhost:8080 |
-
-### 3. Deploy to AWS
-
-```bash
-cd terraform
-
-# Initialize
-terraform init
-
-# Plan
-terraform plan
-
-# Apply
-terraform apply
-```
-
-## 🧪 Testing Self-Healing
-
-### Test 1: Disk Cleanup
-```bash
-# On EC2 instance, create large files
-sudo dd if=/dev/zero of=/tmp/bigfile bs=1M count=5000
-
-# Prometheus will detect disk > 85%
-# Alertmanager sends webhook
-# Ansible auto-cleans disk
-```
-
-### Test 2: Service Restart
-```bash
-# Stop the app container
-sudo docker stop self-healing-app
-
-# Prometheus detects app is down
-# Ansible auto-restarts service
-```
-
-### Test 3: Simulate Error Rate
-```bash
-# Trigger errors
-curl http://localhost:3000/api/simulate-error
-
-# High error rate > 5% triggers restart
-```
-
-## 📊 Monitoring Alerts
-
-| Alert | Threshold | Auto-Remediation |
-|-------|-----------|-----------------|
-| HighErrorRate | Error rate > 5% for 2min | restart_service |
-| ServiceDown | App down for 1min | restart_service |
-| HighDiskUsage | Disk > 85% for 5min | disk_cleanup |
-| HighMemoryUsage | Memory > 90% for 5min | memory_cleanup |
-| HighCPUUsage | CPU > 80% for 10min | Notification only |
-| ContainerRestartLoop | Frequent restarts | restart_service |
-| HighResponseTime | P95 > 2s for 5min | Notification only |
-
-## 🔧 CI/CD Pipeline (Jenkins)
-
-1. **Checkout** - Pull code from Git
-2. **Test** - Run unit tests
-3. **Build** - Build Docker image
-4. **Push** - Push to ECR
-5. **Deploy** - Rolling update via ASG
-
-## 📝 Environment Variables
-
-```bash
-# Required
-AWS_ACCESS_KEY_ID=your-key
-AWS_SECRET_ACCESS_KEY=your-secret
-SLACK_WEBHOOK_URL=https://hooks.slack.com/services/...
-
-# Optional
-AWS_REGION=us-east-1
-TF_VAR_docker_image=your-image:latest
-```
-
-## 🔒 Security Features
-
-- Non-root Docker user
-- Security groups with least privilege
-- IAM roles for EC2 instances
-- Encrypted S3 state bucket
-- DynamoDB state locking
-- Helmet.js for HTTP headers
-
----
-
-Built with ❤️ for Self-Healing Infrastructure
+# Vops Team

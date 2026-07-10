@@ -124,7 +124,9 @@ app.use((err, req, res, next) => {
   logger.error('Unhandled error', { error: err.message, stack: err.stack });
   res.status(500).json({ error: 'Internal server error' });
 });
-
+app.get('/health', (req, res) => {
+  res.status(200).send('OK');
+});
 app.listen(PORT, '0.0.0.0', () => {
   logger.info(`Server running on port ${PORT}`);
   console.log(`Server running on port ${PORT}`);

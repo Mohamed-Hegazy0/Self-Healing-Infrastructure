@@ -21,13 +21,17 @@ if [ -z "$1" ]; then
 else
     export SLACK_WEBHOOK_URL="$1"
 fi
+# السطر ده رجعناه شغال عشان المراقبة تقوم
 SLACK_WEBHOOK_URL="$SLACK_WEBHOOK_URL" docker-compose up -d
 cd ..
 
 # Run Ansible
 echo "🔧 Starting Ansible Controller & Webhook Receiver..."
 cd ansible
-SLACK_WEBHOOK_URL="$SLACK_WEBHOOK_URL" docker-compose up -d
+# السطر ده اللي اتلغى
+# SLACK_WEBHOOK_URL="$SLACK_WEBHOOK_URL" docker-compose up -d
+# السطر ده اللي ضفناه عشان نشغل البايثون
+nohup python3 webhook.py > webhook.log 2>&1 &
 cd ..
 
 # Run Jenkins

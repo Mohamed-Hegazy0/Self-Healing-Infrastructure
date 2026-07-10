@@ -1,6 +1,6 @@
 ---
 - name: Deploy Node.js app using Role
-  hosts: web
+  hosts: webservers
   become: yes
   roles:
     - node_app
