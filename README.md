@@ -1,6 +1,3 @@
-cd ~/Self-Healing-Infrastructure
-
-cat << 'EOF' > README.md
 # 🚀 Self-Healing Infrastructure Project
 
 A comprehensive, automated Self-Healing Infrastructure project deployed on AWS. This system leverages modern DevSecOps practices to autonomously monitor, detect, and remediate application failures in real-time without human intervention.
