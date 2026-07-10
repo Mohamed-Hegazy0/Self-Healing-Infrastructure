@@ -40,6 +40,7 @@ The system is designed with a closed-loop remediation architecture. When a servi
 │ Slack Channels  │ │ Custom Webhook  │───▶ Executes `docker restart`
 │ (#all-critical) │ │   (Python API)  │     (Auto-Healing Action)
 └─────────────────┘ └─────────────────┘
+```
 # 📁 Core Project StructurePlaintextself-healing-infrastructure/
 ├── monitoring/         # Observability Stack
 │   ├── prometheus/     # Alert rules (alert.rules.yml)
