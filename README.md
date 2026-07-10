@@ -54,8 +54,9 @@ The system is designed with a closed-loop remediation architecture. When a servi
 ├── terraform/          # Infrastructure as Code (AWS VPC, EC2, ASG)
 └── jenkins/            # CI/CD Pipeline Configuration
 ```
-#🚀 Quick Start & Deployment1. Start the Infrastructure & Monitoring StackDeploy the core application, Prometheus, Grafana, and Alertmanager using Docker 
-``` Compose:Bashcd ~/Self-Healing-Infrastructure/docker
+# 🚀 Quick Start & Deployment1. Start the Infrastructure & Monitoring StackDeploy the core application, Prometheus, Grafana, and Alertmanager using Docker 
+```
+Compose:Bashcd ~/Self-Healing-Infrastructure/docker
 docker-compose up -d
 2. Initialize the Self-Healing Engine (Webhook)Start the custom Python webhook receiver in the background. This service listens for Alertmanager POST requests and executes recovery commands with host-level permissions.Bashcd ~/Self-Healing-Infrastructure/ansible
 nohup python3 -u webhook.py > webhook.log 2>&1 &
@@ -69,4 +70,4 @@ Check the Webhook logs to see the remediation trace:Bashtail -f ~/Self-Healing-I
 # ✅ Container 'self-healing-app' restarted successfully.
 # 📊 Alert Routing & Remediation MatrixAlert RuleSeveritySlack ChannelAuto-Remediation ActionServiceDowncritical#all-critical-alertswebhook.py ➔ Container RestartHighErrorRatecritical#all-critical-alertswebhook.py ➔ Service RestartHighDiskUsagewarning#warnningManual Review / Disk CleanupHighMemorywarning#warnningManual Review / Process Kill🔗 Port Mapping ReferenceServiceEndpointNginx Proxy (App)http://<EC2-IP>:80Grafanahttp://<EC2-IP>:3001Prometheushttp://<EC2-IP>:9090Alertmanagerhttp://<EC2-IP>:9093Webhook Receiverhttp://localhost:5000 (Internal)Jenkinshttp://<EC2-IP>:8080Developed with a focus on high availability, rapid incident response, and zero-downtime infrastructure.EOF
 ```
-#Vops Team
+# Vops Team
