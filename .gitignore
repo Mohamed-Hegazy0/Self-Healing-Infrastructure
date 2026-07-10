@@ -2,3 +2,7 @@
 *.tfstate
 *.tfstate.backup
 .terraform.lock.hcl
+
+# Secrets - never commit real env files
+.env
+jenkins/.env

@@ -1,55 +1,117 @@
+// Jenkinsfile — Self-Healing-Infrastructure (Node.js app)
+// Stages: Checkout -> Test -> Build Docker -> Push to ECR -> Deploy
+//
+// Deploy target: the SAME EC2 "management server" this Jenkins runs on
+// (Cloud-Infrastructure/management-server.tf). Since jenkins/docker-compose.yml
+// already mounts /var/run/docker.sock, we deploy with a plain local `docker run`
+// on that host — no SSH hop needed.
+
 pipeline {
     agent any
+
     environment {
-        AWS_REGION = 'us-east-1'
-        DOCKER_REGISTRY = 'your-ecr.dkr.ecr.us-east-1.amazonaws.com'
-        APP_NAME = 'self-healing-app'
+        AWS_REGION      = 'us-east-1'
+        AWS_ACCOUNT_ID  = '274319535036'   
+        ECR_REPO_NAME   = 'self-healing-app'
+        APP_PORT        = '3000'           // matches docker/Dockerfile EXPOSE
+        CONTAINER_NAME  = 'self-healing-app-container'
+
+        ECR_REGISTRY    = "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
+
+        // Matches the "aws" credential already defined in jenkins/casc.yml
+        AWS_CREDS_ID    = 'aws-credentials'
     }
+
     stages {
+
         stage('Checkout') {
             steps {
                 checkout scm
                 script {
                     env.GIT_COMMIT_SHORT = sh(script: 'git rev-parse --short HEAD', returnStdout: true).trim()
                     env.IMAGE_TAG = "${env.BUILD_NUMBER}-${env.GIT_COMMIT_SHORT}"
+                    env.IMAGE_URI = "${ECR_REGISTRY}/${ECR_REPO_NAME}:${env.IMAGE_TAG}"
                 }
             }
         }
+
         stage('Test') {
             steps {
                 dir('app') {
-                    sh 'npm install && npm test'
+                    sh 'npm ci && npm test'
                 }
             }
         }
-        stage('Build Docker') {
+
+        stage('Build Docker Image') {
             steps {
-                script {
-                    def image = docker.build("${env.DOCKER_REGISTRY}/${env.APP_NAME}:${env.IMAGE_TAG}", "-f docker/Dockerfile app/")
-                    env.BUILT_IMAGE = image.id
-                }
+                sh "docker build -f docker/Dockerfile -t ${env.IMAGE_URI} app/"
             }
         }
+
         stage('Push to ECR') {
             when { branch 'main' }
             steps {
-                script {
-                    docker.withRegistry("https://${env.DOCKER_REGISTRY}", 'ecr:us-east-1:aws-credentials') {
-                        docker.image(env.BUILT_IMAGE).push()
-                        docker.image(env.BUILT_IMAGE).push('latest')
-                    }
+                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding',
+                                   credentialsId: "${AWS_CREDS_ID}",
+                                   accessKeyVariable: 'AWS_ACCESS_KEY_ID',
+                                   secretKeyVariable: 'AWS_SECRET_ACCESS_KEY']]) {
+                    sh '''
+                        aws ecr get-login-password --region ${AWS_REGION} \
+                          | docker login --username AWS --password-stdin ${ECR_REGISTRY}
+
+                        aws ecr describe-repositories --repository-names ${ECR_REPO_NAME} --region ${AWS_REGION} \
+                          || aws ecr create-repository --repository-name ${ECR_REPO_NAME} --region ${AWS_REGION}
+
+                        docker push ${IMAGE_URI}
+                    '''
                 }
             }
         }
+
         stage('Deploy') {
             when { branch 'main' }
             steps {
-                sh 'aws autoscaling start-instance-refresh --auto-scaling-group-name self-healing-app-asg --strategy Rolling'
+                // Jenkins runs on the same "management server" EC2 that hosts the
+                // app container, and /var/run/docker.sock is mounted into this
+                // Jenkins container (see jenkins/docker-compose.yml) — so this is
+                // a local docker run, not an SSH deploy.
+                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding',
+                                   credentialsId: "${AWS_CREDS_ID}",
+                                   accessKeyVariable: 'AWS_ACCESS_KEY_ID',
+                                   secretKeyVariable: 'AWS_SECRET_ACCESS_KEY']]) {
+                    sh '''
+                        aws ecr get-login-password --region ${AWS_REGION} \
+                          | docker login --username AWS --password-stdin ${ECR_REGISTRY}
+
+                        docker pull ${IMAGE_URI}
+                        docker rm -f ${CONTAINER_NAME} || true
+                        docker run -d \
+                          --name ${CONTAINER_NAME} \
+                          --restart unless-stopped \
+                          -p ${APP_PORT}:${APP_PORT} \
+                          --network monitoring \
+                          ${IMAGE_URI}
+                        docker image prune -f
+                    '''
+                }
             }
         }
     }
+
     post {
-        success { slackSend(color: 'good', message: "Deployed: ${env.JOB_NAME} #${env.BUILD_NUMBER}") }
-        failure { slackSend(color: 'danger', message: "Failed: ${env.JOB_NAME} #${env.BUILD_NUMBER}") }
+        success {
+            echo " Deployed ${env.IMAGE_URI} on the management server (port ${APP_PORT})"
+            // Slack disabled temporarily — uncomment when webhook is ready
+            // slackSend(color: 'good', message: "Deployed: ${env.JOB_NAME} #${env.BUILD_NUMBER}")
+        }
+        failure {
+            // Slack disabled temporarily — uncomment when webhook is ready
+            // slackSend(color: 'danger', message: "Failed: ${env.JOB_NAME} #${env.BUILD_NUMBER}")
+            echo "Build failed: ${env.JOB_NAME} #${env.BUILD_NUMBER}"
+        }
+        always {
+            sh 'docker logout ${ECR_REGISTRY} || true'
+        }
     }
 }

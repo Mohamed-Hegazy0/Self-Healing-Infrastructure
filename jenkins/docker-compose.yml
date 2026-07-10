@@ -18,6 +18,15 @@ services:
     environment:
       - CASC_JENKINS_CONFIG=/var/jenkins_home/casc.yml
       - JAVA_OPTS=-Djenkins.install.runSetupWizard=false
+      # These feed the ${...} placeholders in casc.yml — without them JCasC
+      # fails to start. Values come from a .env file in this same folder
+      # (copy jenkins/.env.example to jenkins/.env and fill it in).
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD}
+      - SLACK_WEBHOOK_URL=${SLACK_WEBHOOK_URL}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - GITHUB_USERNAME=${GITHUB_USERNAME}
+      - GITHUB_TOKEN=${GITHUB_TOKEN}
     networks:
       - monitoring
     restart: unless-stopped
