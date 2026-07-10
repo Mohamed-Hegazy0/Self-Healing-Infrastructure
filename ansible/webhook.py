@@ -6,7 +6,7 @@ class WebhookHandler(http.server.BaseHTTPRequestHandler):
     def do_POST(self):
         print("\n🚨 Alert Received from Alertmanager! Triggering Self-Healing...")
         # تنفيذ أمر تشغيل الكونتينر مباشرة
-        subprocess.Popen(["docker", "start", "self-healing-app"])
+        subprocess.Popen(["docker", "restart", "self-healing-app"])
         
         self.send_response(200)
         self.end_headers()

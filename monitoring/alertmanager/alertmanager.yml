@@ -13,39 +13,45 @@ route:
   repeat_interval: 12h
   receiver: 'self-healing-webhook'
   routes:
+    # 1. لو الإنذار auto-remediate أو critical، شغل الـ Webhook أولاً وكمل
     - match:
         severity: auto-remediate
-      receiver: 'ansible-webhook'
+      receiver: 'self-healing-webhook'
       continue: true
 
+    - match:
+        severity: critical
+      receiver: 'self-healing-webhook'
+      continue: true
+
+    # 2. بعد الـ Webhook، ابعت التنبيه لسلاك الخاص بالـ critical
     - match:
         severity: critical
       receiver: 'slack-critical'
       continue: true
 
+    # 3. لو الإنذار warning ابعته لقناة الـ warnings
     - match:
         severity: warning
       receiver: 'slack-warnings'
-      group_wait: 30s
 
 receivers:
   - name: 'default'
     slack_configs:
-      - api_url: 'http://127.0.0.1:8080/dummy-slack'
+      - api_url: 'http://13.222.99.21:8080/dummy-slack'
         channel: '#alerts'
         title: 'Self-Healing Alert'
         text: '{{ range .Alerts }}{{ .Annotations.summary }}\n{{ end }}'
 
-  - name: 'ansible-webhook'
+  - name: 'self-healing-webhook'
     webhook_configs:
-      - url: 'http://webhook-receiver:5000/alertmanager'
+      - url: 'http://10.0.101.161:5000/webhook'
         send_resolved: false
-       
 
   - name: 'slack-critical'
     slack_configs:
-      - api_url: 'http://127.0.0.1:8080/dummy-slack'
-        channel: '#critical-alerts'
+      - api_url: 'https://hooks.slack.com/services/T0BG7HTGE67/B0BGAGR4T5K/ZMLBVjmjvZhgNvtfHlJr1A'
+        channel: '#all-critical-alerts'
         title: 'CRITICAL: {{ .GroupLabels.alertname }}'
         text: |
           {{ range .Alerts }}
@@ -59,8 +65,8 @@ receivers:
 
   - name: 'slack-warnings'
     slack_configs:
-      - api_url: 'http://127.0.0.1:8080/dummy-slack'
-        channel: '#warnings'
+      - api_url: 'https://hooks.slack.com/services/T0BG7HTGE67/B0BGFPJQYM7/oYgOTxVlRX98hnTXwUMReC'
+        channel: '#warnning'
         title: 'WARNING: {{ .GroupLabels.alertname }}'
         text: |
           {{ range .Alerts }}
@@ -68,14 +74,3 @@ receivers:
           *Instance:* {{ .Labels.instance }}
           {{ end }}
         send_resolved: true
-
-  - name: 'self-healing-webhook'
-    webhook_configs:
-      - url: 'http://172.17.0.1:5000'
-
-inhibit_rules:
-  - source_match:
-      severity: 'critical'
-    target_match:
-      severity: 'warning'
-    equal: ['alertname', 'cluster', 'service']
