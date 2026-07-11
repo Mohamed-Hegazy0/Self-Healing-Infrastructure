@@ -1,3 +1,7 @@
+configuration-as-code
+job-dsl
+slack
+aws-credentials
 ansible
 blueocean
 docker-workflow
