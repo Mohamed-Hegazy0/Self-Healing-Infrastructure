@@ -55,7 +55,7 @@ app.get('/', (req, res) => {
     </head>
     <body>
         <div class="dashboard">
-            <h1>V-OPS Infrastructure Hub</h1>
+            <h1>VSCAN Secure Infrastructure</h1>
             <p>Welcome to the automated self-healing application environment.</p>
             <div class="status-box">
                 <span>System Status:</span>
@@ -106,7 +106,7 @@ app.use((req, res) => {
 });
 
 app.listen(PORT, '0.0.0.0', () => {
-  console.log(`Server running on port \${PORT}\`);
+  console.log(`Server running on port ${PORT}`);
 });
 
 module.exports = app;
