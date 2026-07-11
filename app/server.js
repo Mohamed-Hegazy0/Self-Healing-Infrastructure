@@ -30,7 +30,6 @@ const errorCounter = new promClient.Counter({
   labelNames: ['type']
 });
 
-// 🚀 السحر الأول: الواجهة مدمجة مباشرة في الراوت الرئيسي
 app.get('/', (req, res) => {
   res.send(`
     <!DOCTYPE html>
@@ -86,7 +85,6 @@ app.get('/health', (req, res) => {
   res.status(200).json({ status: 'healthy', timestamp: new Date().toISOString() });
 });
 
-// 🚀 السحر التاني: زرار العطل بيموت السيرفر بجد عشان الديمو
 app.get('/api/simulate-error', (req, res) => {
   errorCounter.inc({ type: 'simulated' });
   logger.error('CRITICAL: Simulated crash triggered!');
@@ -108,7 +106,7 @@ app.use((req, res) => {
 });
 
 app.listen(PORT, '0.0.0.0', () => {
-  console.log(`Server running on port ${PORT}`);
+  console.log(\`Server running on port \${PORT}\`);
 });
 
 module.exports = app;

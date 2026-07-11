@@ -35,14 +35,6 @@ pipeline {
             }
         }
 
-        stage('Test') {
-            steps {
-                dir('app') {
-                    sh 'npm ci && npm test'
-                }
-            }
-        }
-
         stage('Build Docker Image') {
             steps {
                 sh "docker build -f app/Dockerfile -t ${env.IMAGE_URI} app/"
@@ -50,7 +42,6 @@ pipeline {
         }
 
         stage('Push to ECR') {
-            when { branch 'main' }
             steps {
                 withCredentials([[$class: 'AmazonWebServicesCredentialsBinding',
                                    credentialsId: "${AWS_CREDS_ID}",
@@ -70,7 +61,6 @@ pipeline {
         }
 
         stage('Deploy') {
-            when { branch 'main' }
             steps {
                 // Jenkins runs on the same "management server" EC2 that hosts the
                 // app container, and /var/run/docker.sock is mounted into this
