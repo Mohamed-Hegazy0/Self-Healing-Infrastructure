@@ -8,7 +8,8 @@ require('dotenv').config();
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-app.use(helmet());
+// السحر هنا: عطلنا الـ CSP مؤقتاً عشان الزرار (Inline Script) يشتغل
+app.use(helmet({ contentSecurityPolicy: false }));
 app.use(cors());
 app.use(express.json());
 
