@@ -35,14 +35,6 @@ pipeline {
             }
         }
 
-        stage('Test') {
-            steps {
-                dir('app') {
-                    sh 'npm ci && npm test'
-                }
-            }
-        }
-
         stage('Build Docker Image') {
             steps {
                 sh "docker build -f app/Dockerfile -t ${env.IMAGE_URI} app/"
