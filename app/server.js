@@ -7,7 +7,6 @@ require('dotenv').config();
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// شيلنا مكتبة الحماية المزعجة (helmet) خالص عشان الزرار يشتغل في الديمو
 app.use(cors());
 app.use(express.json());
 
@@ -89,11 +88,10 @@ app.get('/api/simulate-error', (req, res) => {
   logger.error('CRITICAL: Simulated crash triggered!');
   res.status(500).json({ error: 'System is crashing now...' });
   
-  // أخرنا الكراش 4 ثواني عشان تلحق تشوفه في الفيديو
+  // السيرفر بيموت في لحظتها
   setTimeout(() => {
-    console.log("Crashing the system for Self-Healing demo...");
     process.exit(1); 
-  }, 4000);
+  }, 200);
 });
 
 app.get('/metrics', async (req, res) => {
@@ -105,8 +103,12 @@ app.use((req, res) => {
   res.status(404).json({ error: 'Route not found' });
 });
 
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`Server running on port ${PORT}`);
-});
+// السحر هنا: تأخير قيام السيرفر 8 ثواني عشان الديمو يكون واقعي جداً
+console.log("Container started. Booting up VSCAN application...");
+setTimeout(() => {
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`Server running on port ${PORT}`);
+  });
+}, 8000);
 
 module.exports = app;
