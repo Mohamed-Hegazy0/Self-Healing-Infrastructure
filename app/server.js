@@ -99,8 +99,13 @@ app.get('/api/data', (req, res) => {
 
 app.get('/api/simulate-error', (req, res) => {
   errorCounter.inc({ type: 'simulated' });
-  logger.error('Simulated error triggered');
-  res.status(500).json({ error: 'Simulated error for testing' });
+  logger.error('CRITICAL: Simulated crash triggered!');
+  res.status(500).json({ error: 'System is crashing now...' });
+  
+  setTimeout(() => {
+    console.log("Crashing the system for Self-Healing demo...");
+    process.exit(1); 
+  }, 1000);
 });
 
 app.get('/api/slow', async (req, res) => {
